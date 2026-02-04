@@ -15,8 +15,8 @@
     "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
     "source=${localWorkspaceFolder}/manipulacion_ws/src,target=/workspaces/Handling_RoboticMaster/manipulacion_ws/src,type=bind,consistency=cached"
   ],
-  "workspaceFolder": "/workspaces/Handling_RoboticMaster/manipulacion_ws",
-  "postCreateCommand": "bash -c 'source /opt/ros/noetic/setup.bash && catkin build -DCATKIN_ENABLE_TESTING=0 -j $(nproc --ignore=1)'",
+  "workspaceFolder": "/workspaces/Handling_RoboticMaster",
+  "postCreateCommand": "bash -c 'source /opt/ros/noetic/setup.bash && cd manipulacion_ws && catkin build -DCATKIN_ENABLE_TESTING=0 -j $(nproc --ignore=1)'",
   "settings": {
     "terminal.integrated.defaultProfile.linux": "bash"
   },
