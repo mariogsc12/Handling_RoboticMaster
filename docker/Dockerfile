@@ -3,7 +3,6 @@ ARG ROS_VERSION=noetic-desktop-full
 FROM osrf/ros:$ROS_VERSION
 
 ARG REPOS_PATH=/home/repos
-ARG MANIPULACION_WS=/home/manipulacion_ws
 
 # Disable interactive questions
 ENV DEBIAN_FRONTEND=noninteractive
@@ -77,17 +76,14 @@ RUN apt-get update && apt-get install -qqy -y --no-install-recommends robotpkg-p
 
 # Set environment variables
 ENV REPOS=$REPOS_PATH
-ENV MANIPULACION_WS=$MANIPULACION_WS
 ENV PATH=/opt/openrobots/bin:$PATH
 ENV PKG_CONFIG_PATH=/opt/openrobots/lib/pkgconfig
 ENV LD_LIBRARY_PATH=/opt/openrobots/lib:/usr/local/lib
 ENV PYTHONPATH=/opt/openrobots/lib/python3.8/site-packages
 ENV CMAKE_PREFIX_PATH=/opt/openrobots
 ENV GRASPIT=$REPOS/graspit
-ENV GAZEBO_MODEL_PATH=$MANIPULACION_WS/src/manipulacion_pkg/objects_models
 
 ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-ENV GAZEBO_MODEL_PATH=$MANIPULACION_WS/src/manipulacion_pkg/objects_models:$GAZEBO_MODEL_PATH
 ENV GRASPIT=$REPOS/graspit
 
 # Clone and build graspit
@@ -101,8 +97,4 @@ RUN mkdir -p $REPOS \
    && make -j4 \
    && make install
 
-# Run
-RUN echo "source /opt/ros/noetic/setup.bash" >> /root/.bashrc \
-    && echo "source $MANIPULACION_WS/devel/setup.bash" >> /root/.bashrc
-
-CMD ["bash", "-c", "source /opt/ros/noetic/setup.bash && source $MANIPULACION_WS/devel/setup.bash && exec bash"]
+CMD ["bash", "-c", "exec bash"]
