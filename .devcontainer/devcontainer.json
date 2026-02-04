@@ -18,13 +18,13 @@
   },
   "mounts": [
     "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
-    "source=${localWorkspaceFolder}/manipulacion_ws/src,target=/workspaces/Handling_RoboticMaster/manipulacion_ws/src,type=bind,consistency=cached"
+    "source=${localWorkspaceFolder}/manipulacion_ws/src,target=/workspaces/${localWorkspaceFolderBasename}/manipulacion_ws/src,type=bind,consistency=cached"
   ],
-  "workspaceFolder": "/workspaces/Handling_RoboticMaster",
-  "postCreateCommand": "bash -c 'source /opt/ros/noetic/setup.bash && cd /workspaces/Handling_RoboticMaster/manipulacion_ws && catkin build -DCATKIN_ENABLE_TESTING=0 -j $(nproc --ignore=1) && source devel/setup.bash; echo \"source /workspaces/Handling_RoboticMaster/manipulacion_ws/devel/setup.bash\" >> ~/.bashrc'",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "postCreateCommand": "bash -c 'source /opt/ros/noetic/setup.bash && cd /workspaces/${localWorkspaceFolderBasename}/manipulacion_ws && catkin build -DCATKIN_ENABLE_TESTING=0 -j $(nproc --ignore=1) && source devel/setup.bash; echo \"source /workspaces/${localWorkspaceFolderBasename}/manipulacion_ws/devel/setup.bash\" >> ~/.bashrc'",
   "settings": {
     "terminal.integrated.defaultProfile.linux": "bash",
-    "terminal.integrated.cwd": "/workspaces/Handling_RoboticMaster/manipulacion_ws"
+    "terminal.integrated.cwd": "/workspaces/${localWorkspaceFolderBasename}/manipulacion_ws"
   },
   "extensions": [
     "ms-vscode.cpptools",
