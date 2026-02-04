@@ -5,7 +5,9 @@
     "context": ".."
   },
   "runArgs": [
-    "--net=host"
+    "--net=host",
+    "--privileged",
+    "-e", "DISPLAY=${localEnv:DISPLAY}"
   ],
   "containerEnv": {
     "DISPLAY": "${localEnv:DISPLAY}",

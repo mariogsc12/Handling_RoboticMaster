@@ -63,6 +63,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
    ros-noetic-rqt-joint-trajectory-controller \
    ros-noetic-kdl-parser-py \
    python3-rospkg \
+   x11-apps \
+   mesa-utils \
+   libgl1-mesa-glx \
    && rm -rf /var/lib/apt/lists/*
 
 # Install pip packages
