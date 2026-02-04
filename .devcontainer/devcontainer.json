@@ -7,13 +7,14 @@
   "runArgs": [
     "--net=host",
     "--privileged",
-    "-e", "DISPLAY=${localEnv:DISPLAY}",
+    "-e", "DISPLAY=${localEnv:DISPLAY}"
   ],
   "containerEnv": {
     "DISPLAY": "${localEnv:DISPLAY}",
-    "QT_X11_NO_MITSHM": "1",
-    "PYTHONPATH": "/opt/ros/noetic/lib/python3/dist-packages:/workspaces/Handling_RoboticMaster/manipulacion_ws/devel/lib/python3/dist-packages:/workspaces/Handling_RoboticMaster/manipulacion_ws/src/manipulacion_pkg/scripts:/opt/openrobots/lib/python3.8/site-packages",
-    "ROS_PACKAGE_PATH": "/workspaces/${localWorkspaceFolderBasename}/manipulacion_ws/src:/opt/ros/noetic/share"
+    "QT_X11_NO_MITSHM": "1"
+  },
+  "remoteEnv": {
+    "LD_LIBRARY_PATH": "/opt/ros/noetic/lib:/workspaces/${localWorkspaceFolderBasename}/manipulacion_ws/devel/lib:/opt/openrobots/lib:/usr/local/lib"
   },
   "mounts": [
     "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
