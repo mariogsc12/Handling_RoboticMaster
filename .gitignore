@@ -3,3 +3,6 @@
 .catkin_tools
 logs
 __pycache__
+
+# Ignore changes in jupyter notebooks
+*.ipynb
