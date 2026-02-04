@@ -7,27 +7,29 @@
   "runArgs": [
     "--net=host",
     "--privileged",
-    "-e", "DISPLAY=${localEnv:DISPLAY}"
+    "-e", "DISPLAY=${localEnv:DISPLAY}",
   ],
   "containerEnv": {
     "DISPLAY": "${localEnv:DISPLAY}",
     "QT_X11_NO_MITSHM": "1",
-    "MANIPULACION_WS": "/workspaces/Handling_RoboticMaster/manipulacion_ws",
-    "GAZEBO_MODEL_PATH": "$MANIPULACION_WS/src/manipulacion_pkg/objects_models:$GAZEBO_MODEL_PATH"
+    "PYTHONPATH": "/opt/ros/noetic/lib/python3/dist-packages:/workspaces/Handling_RoboticMaster/manipulacion_ws/devel/lib/python3/dist-packages:/workspaces/Handling_RoboticMaster/manipulacion_ws/src/manipulacion_pkg/scripts:/opt/openrobots/lib/python3.8/site-packages",
+    "ROS_PACKAGE_PATH": "/workspaces/${localWorkspaceFolderBasename}/manipulacion_ws/src:/opt/ros/noetic/share"
   },
   "mounts": [
     "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
     "source=${localWorkspaceFolder}/manipulacion_ws/src,target=/workspaces/Handling_RoboticMaster/manipulacion_ws/src,type=bind,consistency=cached"
   ],
   "workspaceFolder": "/workspaces/Handling_RoboticMaster",
-  "postCreateCommand": "bash -c 'source /opt/ros/noetic/setup.bash && cd $MANIPULACION_WS && catkin build -DCATKIN_ENABLE_TESTING=0 -j $(nproc --ignore=1) && source devel/setup.bash'",
+  "postCreateCommand": "bash -c 'source /opt/ros/noetic/setup.bash && cd /workspaces/Handling_RoboticMaster/manipulacion_ws && catkin build -DCATKIN_ENABLE_TESTING=0 -j $(nproc --ignore=1) && source devel/setup.bash; echo \"source /workspaces/Handling_RoboticMaster/manipulacion_ws/devel/setup.bash\" >> ~/.bashrc'",
   "settings": {
-    "terminal.integrated.defaultProfile.linux": "bash"
+    "terminal.integrated.defaultProfile.linux": "bash",
+    "terminal.integrated.cwd": "/workspaces/Handling_RoboticMaster/manipulacion_ws"
   },
   "extensions": [
     "ms-vscode.cpptools",
     "ms-python.python",
     "ms-iot.vscode-ros",
-    "mhutchie.git-graph"
+    "mhutchie.git-graph",
+    "ms-toolsai.jupyter"
   ]
 }

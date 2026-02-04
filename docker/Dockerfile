@@ -6,6 +6,7 @@ ARG REPOS_PATH=/home/repos
 
 # Disable interactive questions
 ENV DEBIAN_FRONTEND=noninteractive
+ENV REPOS=$REPOS_PATH
 
 # Change docker shell
 SHELL ["/bin/bash", "-c"]
@@ -77,18 +78,6 @@ RUN pip install \
 # Install pinocchio
 RUN apt-get update && apt-get install -qqy -y --no-install-recommends robotpkg-py3*-pinocchio
 
-# Set environment variables
-ENV REPOS=$REPOS_PATH
-ENV PATH=/opt/openrobots/bin:$PATH
-ENV PKG_CONFIG_PATH=/opt/openrobots/lib/pkgconfig
-ENV LD_LIBRARY_PATH=/opt/openrobots/lib:/usr/local/lib
-ENV PYTHONPATH=/opt/openrobots/lib/python3.8/site-packages
-ENV CMAKE_PREFIX_PATH=/opt/openrobots
-ENV GRASPIT=$REPOS/graspit
-
-ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-ENV GRASPIT=$REPOS/graspit
-
 # Clone and build graspit
 RUN mkdir -p $REPOS \
    && cd $REPOS \
@@ -99,5 +88,13 @@ RUN mkdir -p $REPOS \
    && cmake .. \
    && make -j4 \
    && make install
+
+# Set environment variables
+ENV PATH=/opt/openrobots/bin:$PATH
+ENV PKG_CONFIG_PATH=/opt/openrobots/lib/pkgconfig:$PKG_CONFIG_PATH
+ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+ENV PYTHONPATH=/opt/openrobots/lib/python3.8/site-packages:$PYTHONPATH
+ENV CMAKE_PREFIX_PATH=/opt/openrobots:$CMAKE_PREFIX_PATH
+ENV GRASPIT=$REPOS/graspit
 
 CMD ["bash", "-c", "exec bash"]
