@@ -1,0 +1,121 @@
+ARG ROS_VERSION=noetic-desktop-full
+
+FROM osrf/ros:$ROS_VERSION
+
+ARG REPOS_PATH=/home/repos
+ARG MANIPULACION_WS=/home/manipulacion_ws
+
+# Disable interactive questions
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Change docker shell
+SHELL ["/bin/bash", "-c"]
+
+# Install ubuntu tools 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+nano \
+bash \
+vim \
+build-essential \
+cmake \
+wget \
+lsb-release \
+bash-completion \
+git \
+build-essential \
+curl \
+python3-pip \
+coreutils \
+&& rm -rf /var/lib/apt/lists/*
+
+# Add the robotpkg repository and key
+RUN apt-get update && apt-get install -y \
+    curl \
+    lsb-release \
+    ca-certificates \
+ && mkdir -p /etc/apt/keyrings \
+ && curl -fsSL http://robotpkg.openrobots.org/packages/debian/robotpkg.asc \
+    -o /etc/apt/keyrings/robotpkg.asc \
+ && echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/robotpkg.asc] \
+    http://robotpkg.openrobots.org/packages/debian/pub \
+    $(lsb_release -cs) robotpkg" \
+    > /etc/apt/sources.list.d/robotpkg.list
+
+# Install requiered packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+   apt-utils \
+   ipython3 \
+   python-is-python3 \
+   python3-scipy \
+   python3-wstool \
+   python3-networkx \
+   python3-pip \
+   python3-vcstool \
+   python3-rosinstall \
+   python3-catkin-tools \
+   libsoqt520 \
+   libsoqt520-dev \
+   libblas-dev \
+   liblapack-dev \
+   libqhull-dev \
+   libeigen3-dev \
+   ros-noetic-universal-robots \
+   ros-noetic-rqt-joint-trajectory-controller \
+   ros-noetic-kdl-parser-py \
+   python3-rospkg \
+   && rm -rf /var/lib/apt/lists/*
+
+# Install pip packages
+RUN pip install \
+   ipykernel \
+   pyyaml \
+   ipywidgets
+
+# Install pinocchio
+RUN apt-get update && apt-get install -qqy -y --no-install-recommends robotpkg-py3*-pinocchio
+
+# Set environment variables
+ENV REPOS=$REPOS_PATH
+ENV MANIPULACION_WS=$MANIPULACION_WS
+ENV PATH=/opt/openrobots/bin:$PATH
+ENV PKG_CONFIG_PATH=/opt/openrobots/lib/pkgconfig
+ENV LD_LIBRARY_PATH=/opt/openrobots/lib:/usr/local/lib
+ENV PYTHONPATH=/opt/openrobots/lib/python3.8/site-packages
+ENV CMAKE_PREFIX_PATH=/opt/openrobots
+ENV GRASPIT=$REPOS/graspit
+ENV GAZEBO_MODEL_PATH=$MANIPULACION_WS/src/manipulacion_pkg/objects_models
+
+# Clone and build graspit
+RUN mkdir -p $REPOS \
+   && cd $REPOS \
+   && git clone https://github.com/elisabeth-ms/graspit.git --branch qt5 \
+   && cd graspit \
+   && mkdir build \
+   && cd build \
+   && cmake .. \
+   && make -j4 \
+   && make install
+
+# Set up the manipulation workspace
+WORKDIR $MANIPULACION_WS/src
+RUN git clone https://github.com/elisabeth-ms/graspit_interface.git --branch noetic-devel \
+    && git clone https://github.com/graspit-simulator/graspit_commander \
+    && git clone https://github.com/JenniferBuehler/gazebo-pkgs --branch noetic \
+    && rm -rf gazebo-pkgs/gazebo_state_plugins \
+    && rm -rf gazebo-pkgs/gazebo_test_tools \
+    && rm -rf gazebo-pkgs/gazebo_world_plugin_loader
+
+# Ws compilation
+WORKDIR $MANIPULACION_WS
+RUN source /opt/ros/noetic/setup.bash \
+    && catkin build -DCATKIN_ENABLE_TESTING=0 -j $(nproc --ignore=1)
+
+ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+ENV GAZEBO_MODEL_PATH=$MANIPULACION_WS/src/manipulacion_pkg/objects_models:$GAZEBO_MODEL_PATH
+ENV GRASPIT=$REPOS/graspit
+
+# Run
+RUN echo "source /opt/ros/noetic/setup.bash" >> /root/.bashrc \
+    && echo "source $MANIPULACION_WS/devel/setup.bash" >> /root/.bashrc
+
+CMD ["bash", "-c", "source /opt/ros/noetic/setup.bash && source $MANIPULACION_WS/devel/setup.bash && exec bash"]

@@ -1,0 +1,28 @@
+{
+  "name": "handling-devcontainer",
+  "build": {
+    "dockerfile": "../docker/Dockerfile",
+    "context": ".."
+  },
+  "runArgs": [
+    "--net=host"
+  ],
+  "containerEnv": {
+    "DISPLAY": "${localEnv:DISPLAY}",
+    "QT_X11_NO_MITSHM": "1"
+  },
+  "mounts": [
+    "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"
+  ],
+  "workspaceFolder": "/workspaces/DillerHandling_Ros",
+  "postCreateCommand": "echo 'source /opt/ros/noetic/setup.bash' >> ~/.bashrc && echo 'source /home/manipulacion_ws/devel/setup.bash' >> ~/.bashrc",
+  "settings": {
+    "terminal.integrated.defaultProfile.linux": "bash"
+  },
+  "extensions": [
+    "ms-vscode.cpptools",
+    "ms-python.python",
+    "ms-iot.vscode-ros",
+    "mhutchie.git-graph"
+  ]
+}
