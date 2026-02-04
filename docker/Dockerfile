@@ -26,6 +26,7 @@ build-essential \
 curl \
 python3-pip \
 coreutils \
+python3-catkin-tools \
 && rm -rf /var/lib/apt/lists/*
 
 # Add the robotpkg repository and key
@@ -85,6 +86,10 @@ ENV CMAKE_PREFIX_PATH=/opt/openrobots
 ENV GRASPIT=$REPOS/graspit
 ENV GAZEBO_MODEL_PATH=$MANIPULACION_WS/src/manipulacion_pkg/objects_models
 
+ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+ENV GAZEBO_MODEL_PATH=$MANIPULACION_WS/src/manipulacion_pkg/objects_models:$GAZEBO_MODEL_PATH
+ENV GRASPIT=$REPOS/graspit
+
 # Clone and build graspit
 RUN mkdir -p $REPOS \
    && cd $REPOS \
@@ -95,24 +100,6 @@ RUN mkdir -p $REPOS \
    && cmake .. \
    && make -j4 \
    && make install
-
-# Set up the manipulation workspace
-WORKDIR $MANIPULACION_WS/src
-RUN git clone https://github.com/elisabeth-ms/graspit_interface.git --branch noetic-devel \
-    && git clone https://github.com/graspit-simulator/graspit_commander \
-    && git clone https://github.com/JenniferBuehler/gazebo-pkgs --branch noetic \
-    && rm -rf gazebo-pkgs/gazebo_state_plugins \
-    && rm -rf gazebo-pkgs/gazebo_test_tools \
-    && rm -rf gazebo-pkgs/gazebo_world_plugin_loader
-
-# Ws compilation
-WORKDIR $MANIPULACION_WS
-RUN source /opt/ros/noetic/setup.bash \
-    && catkin build -DCATKIN_ENABLE_TESTING=0 -j $(nproc --ignore=1)
-
-ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-ENV GAZEBO_MODEL_PATH=$MANIPULACION_WS/src/manipulacion_pkg/objects_models:$GAZEBO_MODEL_PATH
-ENV GRASPIT=$REPOS/graspit
 
 # Run
 RUN echo "source /opt/ros/noetic/setup.bash" >> /root/.bashrc \
