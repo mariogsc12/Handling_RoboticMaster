@@ -57,8 +57,12 @@ clone_repos(){
 
 remove_git_dirs() {
     echo "Removing .git directories..."
-    find "$DESTINATION_PATH" -maxdepth 2 -type d -name ".git" -exec rm -rf {} +
+    find "$DESTINATION_PATH" -maxdepth 6 -type d -name ".git" | while read gitdir; do
+        echo "Deleting: $gitdir"
+        rm -rf "$gitdir"
+    done
 }
+
 
 main() {
     parse_command_line "$@"
