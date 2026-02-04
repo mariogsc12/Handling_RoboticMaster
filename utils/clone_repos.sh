@@ -53,6 +53,7 @@ clone_repos(){
     git clone https://github.com/elisabeth-ms/graspit_interface.git --branch noetic-devel
     git clone https://github.com/graspit-simulator/graspit_commander
     git clone https://github.com/JenniferBuehler/gazebo-pkgs --branch noetic
+    git clone https://github.com/elisabeth-ms/manipulacion_pkg.git
 
     rm -rf $DESTINATION_PATH/gazebo-pkgs/gazebo_state_plugins
     rm -rf $DESTINATION_PATH/gazebo-pkgs/gazebo_test_tools

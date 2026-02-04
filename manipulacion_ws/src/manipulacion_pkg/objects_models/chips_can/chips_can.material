@@ -1,0 +1,14 @@
+material chips_can
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        // Relative to the location of the material script
+        texture ../chips_can/texture_map.png
+      }
+    }
+  }
+}
