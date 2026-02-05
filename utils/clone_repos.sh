@@ -5,6 +5,7 @@
 # ==========================
 DESTINATION_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REMOVE_GIT=false
+ORIGINAL_DIR=$(pwd)
 
 # ==========================
 # Help
@@ -47,18 +48,33 @@ parse_command_line() {
     done
 }
 
+custom_git_clone() {
+    local repo_url="$1"
+    shift
+    local extra_args=("$@")
+
+    echo "Cloning repository: $repo_url"
+
+    git clone "$repo_url" "${extra_args[@]}" || {
+        echo "❌ Error cloning repository: $repo_url"
+        exit 1
+    }
+}
+
 clone_repos(){
     cd "$DESTINATION_PATH" || exit 1
 
-    git clone https://github.com/elisabeth-ms/graspit_interface.git --branch noetic-devel
-    git clone https://github.com/graspit-simulator/graspit_commander
-    git clone https://github.com/JenniferBuehler/gazebo-pkgs --branch noetic
-    git clone https://github.com/elisabeth-ms/manipulacion_pkg.git
+    custom_git_clone https://github.com/elisabeth-ms/graspit_interface.git --branch noetic-devel
+    custom_git_clone https://github.com/graspit-simulator/graspit_commander
+    custom_git_clone https://github.com/JenniferBuehler/gazebo-pkgs --branch noetic
+    custom_git_clone https://github.com/elisabeth-ms/manipulacion_pkg.git
 
-    rm -rf $DESTINATION_PATH/gazebo-pkgs/gazebo_state_plugins
-    rm -rf $DESTINATION_PATH/gazebo-pkgs/gazebo_test_tools
-    rm -rf $DESTINATION_PATH/gazebo-pkgs/gazebo_world_plugin_loader
-    rm -rf $DESTINATION_PATH/gazebo-pkgs/Dockerfile
+    rm -rf gazebo-pkgs/gazebo_state_plugins
+    rm -rf gazebo-pkgs/gazebo_test_tools
+    rm -rf gazebo-pkgs/gazebo_world_plugin_loader
+    rm -rf gazebo-pkgs/Dockerfile
+
+    cd "$ORIGINAL_DIR" || exit 1
 }
 
 remove_git_dirs() {
