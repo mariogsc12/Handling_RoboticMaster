@@ -7,6 +7,7 @@ from practica1.auxiliar import get_grasps_list
 from pathlib import Path
 import sys
 import argparse
+import math
 
 # ======================================
 #       Argumentos de lanzamiento
@@ -21,7 +22,7 @@ parser.add_argument("--grasp_id",
 parser.add_argument("--trajectory", 
                     type=str, 
                     default="square", 
-                    choices=["square", "triangle"],
+                    choices=["square", "triangle", "square2"],
                     help="Trayectoria a seguir por el gripper para superar el objeto (Default=square)")
 
 parser.add_argument("--check_collisions", 
@@ -162,23 +163,35 @@ simulacion_gripper_flotante.fijar_pose_gripper(
 set_gripper_pos(simulacion_gripper_flotante, mode="custom", articulaciones=used_grasp.dofs)
 rospy.sleep(1)
 
-SQUARE_TRAJECTORY = [(0,0,0.5),
-                    (1,0,0),
-                    (0,0,-0.5)]
+SQUARE_TRAJECTORY   = [(0.0,  0.0,   0.5),
+                       (1.0,  0.0,   0.0),
+                       (0.0,  0.0,  -0.5)]
 
-TRIANGLE_TRAJECTORY = [(0.5,0,1),
-                       (0.5,0,-1)]
+SQUARE2_TRAJECTORY  = [(0.0,  0.0,  0.1),
+                       (0.0,  0.6,  0.0),
+                       (1.0,  0.0,  0.0),
+                       (0.0, -0.6,  0.0),
+                       (0.0,  0.0, -0.1)]
+
+TRIANGLE_TRAJECTORY = [(0.5,  0.0,  1.0),
+                       (0.5,  0.0, -1.0)]
 
 if args.trajectory == "square":
     used_trajectory = SQUARE_TRAJECTORY
 elif args.trajectory == "triangle":
     used_trajectory = TRIANGLE_TRAJECTORY
+elif args.trajectory == "square2":
+    used_trajectory = SQUARE2_TRAJECTORY
+    radio = 5  
 
 initial_pose = pose_gripper_world
 ini_qx, ini_qy, ini_qz, ini_qw = pose_gripper_world.M.GetQuaternion() 
 
+start_of_traj_pose = PyKDL.Frame(pose_gripper_world.M, pose_gripper_world.p)
+
 for increment in used_trajectory:
     fin_x, fin_y, fin_z = tuple(x + y for x, y in zip(initial_pose.p, increment))
+
     next_pose = PyKDL.Frame(
         PyKDL.Rotation.Quaternion(ini_qx, ini_qy, ini_qz, ini_qw),  # Misma orientación
         PyKDL.Vector(fin_x, fin_y, fin_z)
