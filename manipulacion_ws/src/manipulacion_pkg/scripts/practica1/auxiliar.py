@@ -4,7 +4,8 @@ from dataclasses import dataclass
 import yaml
 from pathlib import Path
 from typing import List
- 
+import PyKDL 
+
 GRIPPER_MODES = ["open", "close", "custom"]
 def set_gripper_pos(gripper: SimulacionGripperFlotante, mode: str = "open", articulaciones:Optional[List[Union[float, int]]]  = None):
     if not mode or mode not in GRIPPER_MODES:
@@ -12,7 +13,7 @@ def set_gripper_pos(gripper: SimulacionGripperFlotante, mode: str = "open", arti
     
     posicion_articulaciones_open = [0.0] * 11
     posicion_articulaciones_close = [0.4, 0.4, 0.4, 0, 0.4, 0.4, 0.4, 0, 0.4, 0.4, 0.4]
-    breakpoint()
+
     if mode=="open":
         posicion_articulaciones = posicion_articulaciones_open
         print("Abriendo gripper...")
@@ -50,3 +51,14 @@ def get_grasps_list(grasp_poses_path: Path):
         grasp_list.append(grasp)
 
     return grasp_list
+
+
+def generate_trajectory(initial_pose, final_pose, num_frames):
+    """ Genera una trayectoria de punto a punto utilizando un número de pasos """
+    poses = []
+    for i in range(num_frames):
+      alpha = i / (num_frames - 1)  # Interpolación lineal
+      new_position = initial_pose.p * (1 - alpha) + final_pose.p * alpha
+      new_pose = PyKDL.Frame(initial_pose.M, new_position)
+      poses.append(new_pose)
+    return poses
