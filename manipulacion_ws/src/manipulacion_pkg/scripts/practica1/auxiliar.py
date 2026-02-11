@@ -1,5 +1,5 @@
 from manipulacion_lib import SimulacionGripperFlotante
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Literal
 from dataclasses import dataclass
 import yaml
 from pathlib import Path
@@ -31,13 +31,13 @@ def set_gripper_pos(gripper: SimulacionGripperFlotante, mode: str = "open", arti
 
 @dataclass
 class GraspInfo:
-    dofs: list
-    pose: list
+    dofs: List
+    pose: List
     epsilon_quality: float
     volume_quality: float
 
 
-def get_grasps_list(grasp_poses_path: Path):
+def get_grasp_list(grasp_poses_path: Path, sort: bool = False, sort_by: Literal["epsilon", "volume", "both"] = "epsilon") -> List[GraspInfo]:
     with open(grasp_poses_path, "r") as f:
         data = yaml.safe_load(f)
 
@@ -49,6 +49,21 @@ def get_grasps_list(grasp_poses_path: Path):
                          epsilon_quality=grasp['epsilon_quality'],
                          volume_quality=grasp['volume_quality'])
         grasp_list.append(grasp)
+
+    if sort:
+        return sort_grasp_list(grasp_list, sort_by)
+    else:
+        return grasp_list
+
+def sort_grasp_list(grasp_list: List[GraspInfo], sort_by: Union[Literal["epsilon", "volume", "both"], None] = None) -> List[GraspInfo]:
+    if sort_by == "epsilon":
+        grasp_list.sort(key=lambda x: x.epsilon_quality, reverse=True)
+    
+    elif sort_by == "volume":
+        grasp_list.sort(key=lambda x: x.volume_quality, reverse=True)
+    
+    elif sort_by == "both":
+        grasp_list.sort(key=lambda x: x.epsilon_quality + x.volume_quality, reverse=True)
 
     return grasp_list
 
