@@ -29,3 +29,8 @@ roslaunch manipulacion_pkg main_simulation.launch
 python3 -m src.manipulacion_pkg.scripts.practica1.practica1
 ```
 > Nota: Se usa -m para ejecutar el módulo directamente, asegurando que las importaciones relativas funcionen correctamente.
+
+> Nota2: Se puede seleccionar la trayectoria a seguir mediante el argumento `--trajectory` al ejecutar el script (usa --help para ver las opciones disponibles):
+```bash
+python3 -m src.manipulacion_pkg.scripts.practica1.practica1 --trajectory square
+```
