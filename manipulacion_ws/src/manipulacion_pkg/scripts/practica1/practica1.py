@@ -152,10 +152,12 @@ SQUARE2_TRAJECTORY  = [(0.0,  0.0,  0.1),
 TRIANGLE_TRAJECTORY = [(0.5,  0.0,  1.0),
                        (0.5,  0.0, -1.0)]
 
+num_frames = 200
 if args.trajectory == "square":
     used_trajectory = SQUARE_TRAJECTORY
 elif args.trajectory == "triangle":
     used_trajectory = TRIANGLE_TRAJECTORY
+    num_frames = 500
 elif args.trajectory == "square2":
     used_trajectory = SQUARE2_TRAJECTORY
     radio = 5  
@@ -174,7 +176,7 @@ for increment in used_trajectory:
     )
     print(f"Moviendo gripper a: {next_pose.p}")
 
-    for pose in generate_trajectory(initial_pose, next_pose, num_frames=200):
+    for pose in generate_trajectory(initial_pose, next_pose, num_frames=num_frames):
         new_x, new_y, new_z = pose.p
         new_pose = PyKDL.Frame(
             PyKDL.Rotation.Quaternion(ini_qx, ini_qy, ini_qz, ini_qw),  

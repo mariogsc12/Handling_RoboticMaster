@@ -28,23 +28,11 @@ bash-completion \
 git \
 build-essential \
 curl \
+ca-certificates \
 python3-pip \
 coreutils \
 python3-catkin-tools \
 && rm -rf /var/lib/apt/lists/*
-
-# Add the robotpkg repository and key
-RUN apt-get update && apt-get install -y \
-    curl \
-    lsb-release \
-    ca-certificates \
- && mkdir -p /etc/apt/keyrings \
- && curl -fsSL http://robotpkg.openrobots.org/packages/debian/robotpkg.asc \
-    -o /etc/apt/keyrings/robotpkg.asc \
- && echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/robotpkg.asc] \
-    http://robotpkg.openrobots.org/packages/debian/pub \
-    $(lsb_release -cs) robotpkg" \
-    > /etc/apt/sources.list.d/robotpkg.list
 
 # Install requiered packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -80,9 +68,6 @@ RUN pip install \
    pyyaml \
    ipywidgets
 
-# Install pinocchio
-RUN apt-get update && apt-get install -qqy -y --no-install-recommends robotpkg-py3*-pinocchio
-
 # Clone and build graspit
 RUN mkdir -p $REPOS_PATH \
    && cd $REPOS_PATH \
@@ -93,6 +78,23 @@ RUN mkdir -p $REPOS_PATH \
    && cmake .. \
    && make -j4 \
    && make install
+
+# Install pinocchio
+RUN apt-get update && apt-get install -y curl lsb-release ca-certificates gnupg2 \
+    && mkdir -p /etc/apt/keyrings \
+    && curl http://robotpkg.openrobots.org/packages/debian/robotpkg.asc | tee /etc/apt/keyrings/robotpkg.asc \
+    && echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/robotpkg.asc] http://robotpkg.openrobots.org/packages/debian/pub $(lsb_release -cs) robotpkg" | tee /etc/apt/sources.list.d/robotpkg.list
+
+RUN mkdir -p /etc/apt/keyrings \
+    && curl http://robotpkg.openrobots.org/packages/debian/robotpkg.key | sudo apt-key add - \
+    && echo "deb [arch=amd64] http://robotpkg.openrobots.org/packages/debian/pub $(lsb_release -cs) robotpkg" | sudo tee /etc/apt/sources.list.d/robotpkg.list
+
+RUN apt-get update && apt-get install -y \
+   robotpkg-casadi=3.6.7 \
+   robotpkg-pinocchio=3.4.0 \
+   robotpkg-py38-casadi=3.6.7 \ 
+   robotpkg-py38-pinocchio \
+   && rm -rf /var/lib/apt/lists/*
 
 # Set environment variables
 ENV PATH="/opt/openrobots/bin:$PATH"
