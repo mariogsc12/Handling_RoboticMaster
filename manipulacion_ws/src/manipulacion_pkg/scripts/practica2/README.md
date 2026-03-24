@@ -23,14 +23,5 @@ La organización de los archivos es la siguiente:
 Para ejecutar esta práctica, utiliza el siguiente comando:
 ```bash
 # Terminal 1 -> Lanzar el simulador Gazebo
-roslaunch manipulacion_pkg gripper_simulation.launch
+roslaunch manipulacion_pkg robot_simulation.launch
 
-# Terminal 2 -> Ejecutar el script de la práctica
-python3 -m src.manipulacion_pkg.scripts.practica1.practica1
-```
-> Nota: Se usa -m para ejecutar el módulo directamente, asegurando que las importaciones relativas funcionen correctamente.
-
-> Nota2: Se puede seleccionar la trayectoria a seguir mediante el argumento `--trajectory` al ejecutar el script (usa --help para ver las opciones disponibles):
-```bash
-python3 -m src.manipulacion_pkg.scripts.practica1.practica1 --trajectory square
-```
