@@ -415,6 +415,9 @@ class GazeboRobot(Robot):
         rospy.sleep(0.01)
 
     def command_path_posicion_articulaciones(self, path, time_between_points, start_time):
+        if not path:
+            return 
+        
         trajectory_points = []
 
 

@@ -1,4 +1,4 @@
-from manipulacion_lib import SimulacionGripperFlotante
+from manipulacion_lib import SimulacionGripperFlotante, SimulacionGripper
 from typing import Optional, List, Union, Literal
 from dataclasses import dataclass
 import yaml
@@ -7,7 +7,7 @@ from typing import List
 import PyKDL 
 
 GRIPPER_MODES = ["open", "close", "custom"]
-def set_gripper_pos(gripper: SimulacionGripperFlotante, mode: str = "open", articulaciones:Optional[List[Union[float, int]]]  = None):
+def set_gripper_pos(gripper: Union[SimulacionGripperFlotante, SimulacionGripper], mode: str = "open", articulaciones:Optional[List[Union[float, int]]]  = None):
     if not mode or mode not in GRIPPER_MODES:
         raise ValueError(f"El modo del gripper seleccionado es invalido: {mode}")
     

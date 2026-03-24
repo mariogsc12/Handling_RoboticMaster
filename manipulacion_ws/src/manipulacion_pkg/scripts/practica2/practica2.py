@@ -3,11 +3,12 @@ import manipulacion_lib
 import rospy 
 from practica1.configuration import NOMBRE_GRIPPER_GAZEBO,NOMBRE_GRIPPER,NOMBRE_OBJETO,NOMBRE_OBSTACULO_GAZEBO
 from practica1.auxiliar import get_grasp_list, set_gripper_pos
-from practica2.auxiliar import frame2pose, get_joint_limits
+from practica2.auxiliar import frame2pose, get_joint_limits, get_plan_with_rrt
 import PyKDL 
 import numpy as np
 import sys
 from pathlib import Path
+
 # ======================================
 #       Argumentos de lanzamiento
 # ======================================
@@ -19,11 +20,24 @@ parser.add_argument("--trajectory",
                     choices=["square", "triangle", "square2"],
                     help="Trayectoria a seguir por el gripper para superar el objeto (Default=square)")
 
+parser.add_argument("--quality_selector", 
+                    type=str, 
+                    default="volume", 
+                    choices=["epsilon", "volume"],
+                    help="Indice escogido para la selección del agarre (Default=volume)")
+
+parser.add_argument('--first_grasp', 
+                    action='store_true', 
+                    help="Flag para usar el primer agarre válido encontrado")
+
 args = parser.parse_args()
 
 print(f"Ejecutando script con los siguientes argumentos:" \
-      f"\n\t - trayectoria: {args.trajectory}\n")
+      f"\n\t - trayectoria:      {args.trajectory}",
+      f"\n\t - quality_selector: {args.quality_selector}",
+      f"\n\t - first_grasp:      {args.first_grasp}\n")
 
+MAX_ITERATIONS = 10
 
 # ======================================
 #       Inicialización de nodo ROS
@@ -53,38 +67,11 @@ gazebo_robot = manipulacion_lib.GazeboRobot(nombres_articulaciones=[
     'wrist_3_joint'
 ])
 
-posiciones_articulares_iniciales = [1.2566831278301214, -0.8740287446197677, 0.7563676502460766, -1.1837925124354811, 3.75749471561243, 1.064756533529244]
+posiciones_articulares_iniciales = [1.25, -0.86, 0.75, -0.8, -0.1, 1.06]
 print(f"Moviendo robot a posicion inicial: {posiciones_articulares_iniciales}")
 gazebo_robot.command_posicion_articulaciones(posiciones_articulares_iniciales, time_from_start=2)
 rospy.sleep(2)
 print("="*50)
-
-"""
-# ======================================
-#       Pose de agarre deseada
-# ======================================
-GRASP_POSE = [  
-                0.034807584364096984,
-                0.07896086774105981,
-                0.14877351547364534,
-                0.739926799929824,
-                0.4910760744966404,
-                0.4090306605647276,
-                -0.20987267216234481
-            ]
-
-x, y, z = GRASP_POSE[0:3]
-qx, qy, qz, qw = GRASP_POSE[3:7]
-
-pose_gripper_objeto = PyKDL.Frame(
-    PyKDL.Rotation.Quaternion(qx, qy, qz, qw),
-    PyKDL.Vector(x, y, z)
-)
-
-pose_gripper_world = pose_objeto_world * pose_gripper_objeto
-print("Pose gripper con respecto al mundo: ")
-print(pose_gripper_world)
-"""
 
 # ======================================
 #       Elección de agarre
@@ -119,13 +106,12 @@ wrapper_cinematica = manipulacion_lib.Cinematica(robot=ur10,
 joint_limits = get_joint_limits(ur10)
 
 # 1. Iterar sobre el yaml de posiciones
+grasp_id = 1
 for grasp in get_grasp_list(GRASP_POSES_YAML_PATH, sort=True, sort_by="epsilon"):
+    print("-"*80)
+    print(f"Using grasp {grasp_id}")
 
-    # 2. Chequear que el agarre es válido (métricas de calidad mayores que 0)
-    # if not grasp.epsilon_quality > 0 or not grasp.volume_quality > 0:
-    #     continue
-
-    # 3. Mover gripper 
+    # 2. Mover gripper 
     x, y, z = grasp.pose[0:3]
     qx, qy, qz, qw = grasp.pose[3:7]
 
@@ -137,7 +123,8 @@ for grasp in get_grasp_list(GRASP_POSES_YAML_PATH, sort=True, sort_by="epsilon")
     pose_gripper = frame2pose(pose_gripper_world)
 
     iteracion = 0
-    while iteracion < 10:
+    while iteracion < MAX_ITERATIONS:
+        print(f"--------- iteracion {iteracion+1} ---------")
         valida, posiciones_articulares_deseadas = wrapper_cinematica.calcular_ci(
                     posiciones_articulaciones_actuales=ur10.obtener_posiciones_articulaciones(), 
                     pose_deseada=pose_gripper)
@@ -158,22 +145,40 @@ for grasp in get_grasp_list(GRASP_POSES_YAML_PATH, sort=True, sort_by="epsilon")
                 # Planificación de la Trayectoria
                 planned_path = rrt.plan()
                 if planned_path:
-                    print("Used grasp succesfully found")
-                    used_grasp = grasp
+                    if used_grasp:
+                        if args.quality_selector == "epsilon" and grasp.epsilon_quality > used_grasp.epsilon_quality:
+                            used_grasp = grasp
+                            print(f"Used grasp actualizado. Nuevo epsilon quality: {used_grasp.epsilon_quality}")
+                        elif args.quality_selector == "volume" and grasp.volume_quality > used_grasp.volume_quality:
+                            used_grasp = grasp
+                            print(f"Used grasp actualizado. Nuevo volume quality: {used_grasp.volume_quality}")
+                        else:
+                            print(f"Se mantiene el grasp antiguo debido a {args.quality_selector} quality")
+                    else:
+                        used_grasp = grasp
+                        print(f"Used grasp encontrado")
                     break
                 else:
-                    print("Fallo en la planificación con RRT")
+                    print("Fallo en la planificación con RRT, skipping...")
+                    iteracion += 1
+                    continue
 
             else:
-                print("Hay colisión, recalculando...")
-        if used_grasp and planned_path:
+                print("Colisión encontrada, skipping...")
+                iteracion += 1
+                continue
+
+        # Uso del primer grasp válido (si el flag esta definido)
+        if args.first_grasp and (used_grasp and planned_path):
             break
+        
         else:
-            print("Resultado ci no válido, recalculando...")
-    
-        iteracion += 1
-        rospy.sleep(0.1) 
-    
+            print("Resultado ci no válido, skipping...")
+            iteracion += 1
+            continue
+
+    grasp_id += 1
+    planned_path = None
     if not used_grasp:
         print("No se ha encontrado ningun agarre válido")
         continue
@@ -202,14 +207,30 @@ print("="*80)
 print("Iniciando proceso de movimiento de objeto")
 
 simulacion_gripper.configurar_gripper()
-simulacion_gripper.abrir_gripper()
+set_gripper_pos(simulacion_gripper,mode="open")
 
 x, y, z = used_grasp.pose[0:3]
 qx, qy, qz, qw = used_grasp.pose[3:7]
 
-pose_gripper_objeto = PyKDL.Frame(
-    PyKDL.Rotation.Quaternion(qx, qy, qz, qw),
-    PyKDL.Vector(x, y, z)
-)
-pose_gripper_world = pose_objeto_world * pose_gripper_objeto
-ur10.command_path_posicion_articulaciones(planned_path, 0.5, 1.0)
+rot_grasp = PyKDL.Rotation.Quaternion(qx, qy, qz, qw)
+pos_grasp = PyKDL.Vector(x, y, z)
+pose_gripper_objeto = PyKDL.Frame(rot_grasp, pos_grasp)
+
+# Calcular pose final en el mundo
+pose_final_world = pose_objeto_world * pose_gripper_objeto
+
+# 1. Mover a pose de agarre
+print("Planificando movimiento final al objeto...")
+plan = get_plan_with_rrt(wrapper_cinematica, detector_colisiones, ur10, pose_final_world)
+
+if plan:
+    ur10.command_path_posicion_articulaciones(plan, 0.5, 1.0)
+    rospy.sleep(1) 
+
+    # Agarrar objeto
+    set_gripper_pos(simulacion_gripper, mode="close")
+else:
+    print("ERROR: No se pudo encontrar un camino sin colisiones al objeto")
+
+# 2. Iniciar trayectoria
+
