@@ -1392,8 +1392,6 @@ class SimulacionGripper():
       self.pub_posicion_articulaciones_gripper_command.publish(trajectory)
       rospy.sleep(2)
       
-
-      
     def abrir_gripper(self):
       self.set_posicion_articulaciones(self.posicion_articulaciones_gripper_abierto)
     
