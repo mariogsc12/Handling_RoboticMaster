@@ -261,7 +261,7 @@ if valida:
     # Entramos LENTO (3 segundos) para que la interpolación sea casi lineal
     # y los dedos no golpeen el objeto.
     ur10.command_posicion_articulaciones(joints_final, time_from_start=3.0)
-    rospy.sleep(1) 
+    rospy.sleep(3) 
     
     print("¡Objeto alcanzado! Cerrando gripper...")
     set_gripper_pos(simulacion_gripper, mode="close")
@@ -270,9 +270,9 @@ else:
     print("ERROR: CI no válida para el punto de contacto")
 
 # --- 4. INICIAR TRAYECTORIA DE DESPLAZAMIENTO ---
-SQUARE_TRAJECTORY   = [(0.0,  0.0,   0.5),
-                       (1.0,  0.0,   0.0),
-                       (0.0,  0.0,  -0.5)]
+SQUARE_TRAJECTORY   = [(0.0,  0.0,   0.6),
+                       (0.0, -1.0,   0.0),
+                       (0.0,  0.0,  -0.6)]
 
 SQUARE2_TRAJECTORY  = [(0.0,  0.0,  0.1),
                        (0.0,  0.6,  0.0),
@@ -291,35 +291,25 @@ elif args.trajectory == "square2":
     used_trajectory = SQUARE2_TRAJECTORY
     radio = 5  
 
-initial_pose = pose_final_world
-ini_qx, ini_qy, ini_qz, ini_qw = initial_pose.M.GetQuaternion() 
+current_pose = pose_final_world
+orientacion_fija = current_pose.M
 
 for increment in used_trajectory:
-    fin_x, fin_y, fin_z = tuple(x + y for x, y in zip(initial_pose.p, increment))
+    target_pos = current_pose.p + PyKDL.Vector(*increment)
+    next_pose = PyKDL.Frame(orientacion_fija, target_pos)
 
-    next_pose = PyKDL.Frame(
-        PyKDL.Rotation.Quaternion(ini_qx, ini_qy, ini_qz, ini_qw),  # Misma orientación
-        PyKDL.Vector(fin_x, fin_y, fin_z)
-    )
-    print(f"Moviendo gripper a: {next_pose.p}")
+    print(f"--- Moviendo robot hacia: {next_pose.p} ---")
+    
+    plan = get_plan_with_rrt(wrapper_cinematica, detector_colisiones, ur10, next_pose)
 
-    for pose in generate_trajectory(initial_pose, next_pose):
-        new_x, new_y, new_z = pose.p
-        new_pose = PyKDL.Frame(
-            PyKDL.Rotation.Quaternion(ini_qx, ini_qy, ini_qz, ini_qw),  
-            PyKDL.Vector(new_x, new_y, new_z)
-        )
-        
-        print("Planificando siguiente movimiento...")
-        plan = get_plan_with_rrt(wrapper_cinematica, detector_colisiones, ur10, new_pose)
+    if plan:
+        ur10.command_path_posicion_articulaciones(plan, 0.7, 0.8)
+        rospy.sleep(len(plan) * 0.2 + 0.5) 
+    else:
+        print(f"ADVERTENCIA: RRT no encontró camino a {next_pose.p}. Saltando paso...")
 
-        if plan:
-            print("Ejecutando movimiento")
-            ur10.command_path_posicion_articulaciones(plan, 0.5, 1.0)
-            rospy.sleep(1) 
+    # Actualizar el inicio
+    current_pose = next_pose
 
-        else:
-            print("ERROR: No se pudo encontrar un camino sin colisiones al objeto")
-            initial_pose = next_pose
-
+print("Trayectoria completada. Soltando objeto...")
 set_gripper_pos(simulacion_gripper, mode="open")
