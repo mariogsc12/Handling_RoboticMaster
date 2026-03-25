@@ -31,7 +31,7 @@ def get_plan_with_rrt(
         gazebo_robot: GazeboRobot, 
         pose_deseada: Union[Pose, PyKDL.Frame], 
         joint_limits: Optional[list] = None,
-        max_iteration:int = 20,
+        max_iteration:int = 2,
         debug:bool = False) -> Optional[list]:
     
     class Logger:

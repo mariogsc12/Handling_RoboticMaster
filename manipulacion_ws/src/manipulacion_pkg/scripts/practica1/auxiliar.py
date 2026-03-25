@@ -68,7 +68,7 @@ def sort_grasp_list(grasp_list: List[GraspInfo], sort_by: Union[Literal["epsilon
     return grasp_list
 
 
-def generate_trajectory(initial_pose, final_pose, num_frames):
+def generate_trajectory(initial_pose, final_pose, num_frames: int = 2):
     """ Genera una trayectoria de punto a punto utilizando un número de pasos """
     poses = []
     for i in range(num_frames):
