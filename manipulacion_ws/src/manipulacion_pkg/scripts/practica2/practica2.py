@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser(description="Control de gripper en simulación 
 parser.add_argument("--trajectory", 
                     type=str, 
                     default="square", 
-                    choices=["square", "triangle", "square2"],
+                    choices=["square"],
                     help="Trayectoria a seguir por el gripper para superar el objeto (Default='square')")
 
 parser.add_argument("--quality_selector", 
@@ -39,7 +39,10 @@ print(f"Ejecutando script con los siguientes argumentos:" \
       f"\n\t - quality_selector: {args.quality_selector}",
       f"\n\t - grasp_selector:   {args.grasp_selector}\n")
 
-MAX_ITERATIONS = 10
+
+# Configuration of 'command_path_posicion_articulaciones' function 
+PATH_TIME_BETWEEN_POINTS = 1.5
+PATH_START_TIME = 1.0
 
 # ======================================
 #       Inicialización de nodo ROS
@@ -56,6 +59,11 @@ ur10 = manipulacion_lib.GazeboRobot()
 simulacion_gripper = manipulacion_lib.SimulacionGripper(nombre_gripper_gazebo="gripper")
 simulacion_gripper.configurar_gripper()
 
+# Hay veces que durante la inicialización el brazo se vuelve loco y golpea el objeto
+posicion = PyKDL.Vector(0.8, 0.5, 0.0)
+rotacion = PyKDL.Rotation.RPY(0.0, 0.0, 0.5)
+nueva_pose_objeto = PyKDL.Frame(rotacion, posicion)
+simulacion_gripper.set_pose_objeto(nombre_objeto_gazebo=NOMBRE_OBJETO, nueva_pose_kdl=nueva_pose_objeto)
 # Se obtiene la pose del objeto con respecto al sistema de referencia global (world)
 pose_objeto_world = simulacion_gripper.obtener_pose_objeto(
                     nombre_objeto_gazebo=NOMBRE_OBJETO)
@@ -132,66 +140,34 @@ else:
         pose_gripper_world = pose_objeto_world * pose_gripper_objeto
         pose_gripper = frame2pose(pose_gripper_world)
 
-        iteracion = 0
-        while iteracion < MAX_ITERATIONS:
-            print(f"--------- iteracion {iteracion+1} ---------")
-            valida, posiciones_articulares_deseadas = wrapper_cinematica.calcular_ci(
-                        posiciones_articulaciones_actuales=ur10.obtener_posiciones_articulaciones(), 
-                        pose_deseada=pose_gripper)
-            
-            if valida:
-                print("Posiciones articulares deseadas: ", posiciones_articulares_deseadas)
-                hay_colision = detector_colisiones.hay_colision(posiciones_articulares_deseadas)
-                if not hay_colision:
-                    print("NO hay colision")
-                    print("Usando RRT para planificar...")
-                    
-                    # Configuración del Algoritmo RRT
-                    rrt = manipulacion_lib.BiRRTJointSpace(start=ur10.obtener_posiciones_articulaciones(), 
-                                                            goal=posiciones_articulares_deseadas, 
-                                                            joint_limits=joint_limits, 
-                                                            collision_detector=detector_colisiones)
+        plan = get_plan_with_rrt(wrapper_cinematica, detector_colisiones, ur10, pose_gripper)
                 
-                    # Planificación de la Trayectoria
-                    planned_path = rrt.plan()
-                    if planned_path:
-                        if used_grasp:
-                            if args.quality_selector == "epsilon" and grasp.epsilon_quality > used_grasp.epsilon_quality:
-                                used_grasp = grasp
-                                print(f"Used grasp actualizado. Nuevo epsilon quality: {used_grasp.epsilon_quality}")
-                            elif args.quality_selector == "volume" and grasp.volume_quality > used_grasp.volume_quality:
-                                used_grasp = grasp
-                                print(f"Used grasp actualizado. Nuevo volume quality: {used_grasp.volume_quality}")
-                            else:
-                                print(f"Se mantiene el grasp antiguo debido a {args.quality_selector} quality")
-                            
-                            # Uso del primer grasp válido (si el flag esta definido)
-                            if args.grasp_selector == "first":
-                                break
-                        else:
-                            used_grasp = grasp
-                            print(f"Used grasp encontrado")
-                        break
-                    else:
-                        print("Fallo en la planificación con RRT, skipping...")
-                        iteracion += 1
-                        continue
-
+        # Planificación de la Trayectoria
+        if plan:
+            if used_grasp:
+                if args.quality_selector == "epsilon" and grasp.epsilon_quality > used_grasp.epsilon_quality:
+                    used_grasp = grasp
+                    print(f"Used grasp actualizado. Nuevo epsilon quality: {used_grasp.epsilon_quality}")
+                elif args.quality_selector == "volume" and grasp.volume_quality > used_grasp.volume_quality:
+                    used_grasp = grasp
+                    print(f"Used grasp actualizado. Nuevo volume quality: {used_grasp.volume_quality}")
                 else:
-                    print("Colisión encontrada, skipping...")
-                    iteracion += 1
-                    continue
-            
+                    print(f"Se mantiene el grasp antiguo debido a {args.quality_selector} quality")
+                
+                # Uso del primer grasp válido (si el flag esta definido)
+                if args.grasp_selector == "first":
+                    break
             else:
-                print("Resultado ci no válido, skipping...")
-                iteracion += 1
-                continue
-
+                used_grasp = grasp
+                print(f"Used grasp encontrado")
+        
+        else:
+            print("Fallo en la planificación con RRT, skipping...")
+            
         grasp_id += 1
-        planned_path = None
-        if not used_grasp:
-            print("No se ha encontrado ningun agarre válido")
-            continue
+        plan = None
+
+
 
 if not used_grasp:
     print("No se ha encontrado ningun agarre válido en toda la lista de grasps")
@@ -235,12 +211,11 @@ distancia_aproximacion = 0.15
 pose_pre_world = pose_final_world * PyKDL.Frame(PyKDL.Vector(0, 0, distancia_aproximacion))
 
 # --- PASO A: IR AL PRE-AGARRE (RRT) ---
-# El RRT buscará un camino que no choque con nada para ponerse "frente" al objeto
 print("Moviendo a posición de espera (Pre-agarre)...")
 plan_pre = get_plan_with_rrt(wrapper_cinematica, detector_colisiones, ur10, pose_pre_world)
 
 if plan_pre:
-    ur10.command_path_posicion_articulaciones(plan_pre, 0.5, 1.0)
+    ur10.command_path_posicion_articulaciones(plan_pre, PATH_TIME_BETWEEN_POINTS, PATH_START_TIME)
     rospy.sleep(len(plan_pre) * 0.5 + 2.0)
 else:
     print("ERROR: RRT no pudo encontrar camino al pre-agarre")
@@ -249,7 +224,7 @@ else:
 # --- PASO B: ENTRAR AL OBJETO (APROXIMACIÓN FINAL) ---
 print("Entrando al objeto para el agarre...")
 
-# IMPORTANTE: Para que no de error de colisión al acercarse al taladro
+# IMPORTANTE Para que no de error de colisión al acercarse al taladro
 detector_colisiones.obstaculos = [obstaculo_rojo] # Quitamos el objeto de la lista
 
 valida, joints_final = wrapper_cinematica.calcular_ci(
@@ -258,8 +233,6 @@ valida, joints_final = wrapper_cinematica.calcular_ci(
 )
 
 if valida:
-    # Entramos LENTO (3 segundos) para que la interpolación sea casi lineal
-    # y los dedos no golpeen el objeto.
     ur10.command_posicion_articulaciones(joints_final, time_from_start=3.0)
     rospy.sleep(3) 
     
@@ -267,29 +240,15 @@ if valida:
     set_gripper_pos(simulacion_gripper, mode="close")
     rospy.sleep(1)
 else:
-    print("ERROR: CI no válida para el punto de contacto")
+    print("[ERROR]: CI no válida para el punto de contacto")
 
 # --- 4. INICIAR TRAYECTORIA DE DESPLAZAMIENTO ---
 SQUARE_TRAJECTORY   = [(0.0,  0.0,   0.6),
                        (0.0, -1.0,   0.0),
                        (0.0,  0.0,  -0.6)]
 
-SQUARE2_TRAJECTORY  = [(0.0,  0.0,  0.1),
-                       (0.0,  0.6,  0.0),
-                       (1.0,  0.0,  0.0),
-                       (0.0, -0.6,  0.0),
-                       (0.0,  0.0, -0.1)]
-
-TRIANGLE_TRAJECTORY = [(0.5,  0.0,  1.0),
-                       (0.5,  0.0, -1.0)]
-
 if args.trajectory == "square":
     used_trajectory = SQUARE_TRAJECTORY
-elif args.trajectory == "triangle":
-    used_trajectory = TRIANGLE_TRAJECTORY
-elif args.trajectory == "square2":
-    used_trajectory = SQUARE2_TRAJECTORY
-    radio = 5  
 
 current_pose = pose_final_world
 orientacion_fija = current_pose.M
@@ -303,13 +262,44 @@ for increment in used_trajectory:
     plan = get_plan_with_rrt(wrapper_cinematica, detector_colisiones, ur10, next_pose)
 
     if plan:
-        ur10.command_path_posicion_articulaciones(plan, 0.7, 0.8)
-        rospy.sleep(len(plan) * 0.2 + 0.5) 
+        ur10.command_path_posicion_articulaciones(plan, PATH_TIME_BETWEEN_POINTS, PATH_START_TIME)
+        rospy.sleep(2) 
     else:
-        print(f"ADVERTENCIA: RRT no encontró camino a {next_pose.p}. Saltando paso...")
+        print(f"[WARNINGN]: RRT no encontró camino a {next_pose.p}. Saltando paso...")
 
     # Actualizar el inicio
     current_pose = next_pose
 
 print("Trayectoria completada. Soltando objeto...")
 set_gripper_pos(simulacion_gripper, mode="open")
+rospy.sleep(2)
+
+# ======================================
+#       RETIRADA FINAL 
+# ======================================
+print("="*80)
+print("Iniciando retirada de seguridad...")
+
+# 1. Calculamos la pose de retirada (retroceder 20cm en el eje Z local del gripper)
+distancia_retirada = 0.20 
+pose_retirada_world = current_pose * PyKDL.Frame(PyKDL.Vector(0, 0, distancia_retirada))
+
+# 2. Planificamos el movimiento de alejamiento
+obstaculos.append(objeto)
+print(f"Alejando gripper a: {pose_retirada_world.p}")
+plan_retirada = get_plan_with_rrt(wrapper_cinematica, detector_colisiones, ur10, pose_retirada_world)
+
+if plan_retirada:
+    ur10.command_path_posicion_articulaciones(plan_retirada, PATH_TIME_BETWEEN_POINTS, PATH_START_TIME)
+    rospy.sleep(2)
+    print("Retirada completada con éxito.")
+else:
+    print("ADVERTENCIA: No se pudo planificar la retirada lineal, intentando mover a posición inicial...")
+
+# 3. Movimiento opcional a posición de reposo (Home)
+print("Moviendo a posición de reposo final...")
+gazebo_robot.command_posicion_articulaciones(posiciones_articulares_iniciales, time_from_start=4)
+rospy.sleep(4)
+
+print("Proceso finalizado correctamente.")
+print("="*80)

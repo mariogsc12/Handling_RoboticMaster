@@ -1351,8 +1351,13 @@ class SimulacionGripper():
         self.pose_objeto = None
         self.nombre_gripper_gazebo = nombre_gripper_gazebo
         self.tipo_gripper = rospy.get_param('/tipo_gripper')
+
         rospy.wait_for_service('/gazebo/get_model_state')
         self.get_state = rospy.ServiceProxy('/gazebo/get_model_state', GetModelState)
+
+        rospy.wait_for_service('/gazebo/set_model_state')
+        self.set_state = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
+
         self.nombre_articulaciones_gripper = []
         self.pub_posicion_articulaciones_gripper_command = None
         self.posicion_articulaciones_gripper_abierto = []
@@ -1401,6 +1406,39 @@ class SimulacionGripper():
     def get_tipo_gripper(self):
       return self.tipo_gripper
 
+    def set_pose_objeto(self, nombre_objeto_gazebo, nueva_pose_kdl):
+        """
+        Cambia la pose de un objeto en Gazebo.
+        :param nombre_objeto_gazebo: String con el nombre del modelo.
+        :param nueva_pose_kdl: Objeto PyKDL.Frame con la posición y rotación deseada.
+        """
+        estado_modelo = ModelState()
+        estado_modelo.model_name = nombre_objeto_gazebo
+        estado_modelo.reference_frame = 'world' 
+        
+        # Extraer posición del Frame KDL
+        estado_modelo.pose.position.x = nueva_pose_kdl.p.x()
+        estado_modelo.pose.position.y = nueva_pose_kdl.p.y()
+        estado_modelo.pose.position.z = nueva_pose_kdl.p.z()
+        
+        # Extraer orientación del Frame KDL
+        qx, qy, qz, qw = nueva_pose_kdl.M.GetQuaternion()
+        estado_modelo.pose.orientation.x = qx
+        estado_modelo.pose.orientation.y = qy
+        estado_modelo.pose.orientation.z = qz
+        estado_modelo.pose.orientation.w = qw
+        
+        try:
+            resp = self.set_state(estado_modelo)
+            if resp.success:
+                print(f"Objeto '{nombre_objeto_gazebo}' movido con éxito.")
+                self.pose_objeto = nueva_pose_kdl
+            else:
+                rospy.logerr(f"Gazebo no pudo mover el objeto: {resp.status_message}")
+            return resp.success
+        except rospy.ServiceException as e:
+            rospy.logerr(f"Fallo en la llamada al servicio set_model_state: {e}")
+            return False
 
 
 

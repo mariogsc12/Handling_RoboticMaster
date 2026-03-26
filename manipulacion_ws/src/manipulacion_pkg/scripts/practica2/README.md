@@ -10,12 +10,7 @@ La organización de los archivos es la siguiente:
 
 * **`practica1.py`**: Es el script principal (punto de entrada). Coordina el flujo de la práctica, desde la carga de poses hasta la ejecución del movimiento en el simulador o robot real.
 * **`auxiliar.py`**: Contiene funciones de soporte esenciales. Aquí se gestionan:
-    * La lectura y filtrado de archivos YAML.
-    * El ordenamiento de agarres por métricas de calidad (`epsilon_quality`, `volume_quality`).
-    * Generación de trayectorias y control del gripper.
-* **`configuration.py`**: Centraliza los parámetros de configuración, como nombres de los joints, offsets, rutas de archivos y parámetros del entorno para evitar "hardcodear" valores en el código principal.
-* **`grasp_poses/`**: Carpeta que almacena los datos técnicos de los agarres.
-    * `grasp_poses_robotiq_driller_small.yaml`: Contiene las definiciones de los agarres para la herramienta *driller*, incluyendo sus matrices de transformación y métricas de calidad.
+    * función (wrapper) para cálculo del plan usando la pose objetivo y la configuración del robot.
 
 ---
 
@@ -25,3 +20,14 @@ Para ejecutar esta práctica, utiliza el siguiente comando:
 # Terminal 1 -> Lanzar el simulador Gazebo
 roslaunch manipulacion_pkg robot_simulation.launch
 
+# Terminal 2 -> Ejecutar el script de la práctica
+python3 -m src.manipulacion_pkg.scripts.practica2.practica2
+```
+> Nota: Se usa -m para ejecutar el módulo directamente, asegurando que las importaciones relativas funcionen correctamente.
+
+> Nota2: Se puede seleccionar el método de selección de agarres mediante el argumento `--grasp_selector` 
+`python3 -m src.manipulacion_pkg.scripts.practica2.practica2 --grasp_selector best `
+
+> Nota3: Si se ha seleccionado el método de selección `best`, se puede elegir el indice de calidad mediante el argumento `--quality_selector` 
+`python3 -m src.manipulacion_pkg.scripts.practica2.practica2 --quality_selector volume `
+```
