@@ -1,4 +1,4 @@
-# Handling_RoboticMaster
+# RobotArmManipulation
 
 This repository contains a robotics manipulation workspace focused on **robotic arm handling, grasping, and simulation**, developed mainly using **ROS**, **Gazebo**, and **GraspIt!**.  
 It is structured as a complete ROS workspace and includes tools, scripts, notebooks, and Docker support to ensure reproducibility.
@@ -8,7 +8,7 @@ It is structured as a complete ROS workspace and includes tools, scripts, notebo
 ## 📁 Repository Structure
 
 ```bash
-Handling_RoboticMaster/
+RobotArmManipulation/
 ├── docker/                 # Dockerfiles and container configuration
 ├── utils/                  # Auxiliary utilities
 ├── .devcontainer/          # VS Code devcontainer setup
